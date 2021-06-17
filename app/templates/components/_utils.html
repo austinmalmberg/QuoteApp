@@ -1,0 +1,16 @@
+
+{% macro surround(content='', prefix='', suffix='') %}
+    {%- if prefix -%}
+        {{ prefix }}&nbsp;
+    {%- endif -%}
+
+    {%- if content -%}
+        {{ content }}
+    {% else %}
+        {{ caller() }}
+    {% endif %}
+
+    {%- if suffix -%}
+        &nbsp;{{ suffix }}
+    {%- endif -%}
+{% endmacro %}

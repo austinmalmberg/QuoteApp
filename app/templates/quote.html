@@ -1,0 +1,162 @@
+{% extends 'layouts/base.html' %}
+
+{% from 'components/_utils.html' import surround %}
+
+{% macro main_div(underlined=True) %}
+<div class="row align-items-center py-2 mb-3{{ ' border-bottom' if underlined else '' }}">
+    {{ caller() }}
+</div>
+{% endmacro %}
+
+{% macro input_div() %}
+<div class="col-4 col-md-3 d-flex align-items-center">
+    {{ caller() }}
+</div>
+{% endmacro %}
+
+{% macro h2_field(field, input_attrs=dict(), label_attrs=dict(), input_prefix='', input_suffix='') %}
+{% call main_div() %}
+    {% do label_attrs.update({'class': ' '.join(['w-100', label_attrs.class or '']) }) %}
+    <h2 class="col-8 col-md-9">{{ field.label(**label_attrs) }}</h2>
+    {% call input_div() %}
+        {% set input_prefix = '$' if not input_prefix and field.type == 'CurrencyField' else '' %}
+        {% call surround(prefix=input_prefix, suffix=input_suffix) %}
+            {% do input_attrs.update({'class': ' '.join(['form-control text-center', input_attrs.class or '']) }) %}
+            {{ field(**input_attrs) }}
+        {% endcall %}
+    {% endcall %}
+{% endcall %}
+{% endmacro %}
+
+{% macro sub_div() %}
+<div class="row align-items-center pb-1 my-1">
+    {{ caller() }}
+</div>
+{% endmacro %}
+
+{% macro h3_field(field, input_attrs=dict(), label_attrs=dict(), input_prefix='', input_suffix='') %}
+{% do input_attrs.update({'class': ' '.join(['form-control', input_attrs.class or '']) }) %}
+{% call sub_div() %}
+    {% if field.type == 'TextAreaField' %}
+        {% do input_attrs.update({'class': ' '.join(['w-100', input_attrs.class or '']) }) %}
+        <div class="my-2">
+            <h3 class="h4 {{ 'mb-0' if field.description else '' }}">{{ field.label(**label_attrs) }}</h3>
+            {% if field.description %}
+            <span class="text-muted">{{ field.description }}</span>
+            {% endif %}
+        </div>
+        <div>
+            {{ field(**input_attrs) }}
+        </div>
+    {% else %}
+        <div class="col-8 col-md-9 my-2 {{ 'd-flex flex-column' if field.description else '' }}">
+            <h3 class="h4 {{ 'mb-0' if field.description else '' }}">{{ field.label(**label_attrs) }}</h3>
+            {% if field.description %}
+            <span class="text-muted">{{ field.description }}</span>
+            {% endif %}
+        </div>
+        {% call input_div() %}
+            {% set input_prefix = '$' if not input_prefix and field.type == 'CurrencyField' else '' %}
+            {% do input_attrs.update({'class': ' '.join(['text-center', input_attrs.class or '']) }) %}
+            {% call surround(prefix=input_prefix, suffix=input_suffix) %}
+                {{ field(**input_attrs) }}
+            {% endcall %}
+        {% endcall %}
+    {% endif %}
+{% endcall %}
+{% endmacro %}
+
+{% macro h3_container() %}
+<div class="px-lg-3 mx-lg-2">
+    {{ caller() }}
+</div>
+{% endmacro %}
+
+{% block title %}Home{% endblock %}
+
+{% macro total_row(title, value='', underlined=True, data_calc='', subscribers='') %}
+{% call main_div(underlined=underlined) %}
+<h2 class="col-8 col-md-9">{{ title }}</h2>
+<div class="h4 fw-bold col-4 col-md-3 text-center">
+    {% call surround(prefix='$') %}
+    <span
+            id="{{ title|replace(' ', '-')|lower }}"
+            {% if data_calc %}data-calc="{{ data_calc }}"{% endif %}
+            {% if subscribers %}data-calc-subscribers="{{ subscribers }}"{% endif %}
+    >{{ value }}</span>
+    {% endcall %}
+</div>
+{% endcall %}
+{% endmacro %}
+
+{% macro employee_card(employee, is_active=False) %}
+{% set active_classes = 'active bg-dark text-white' %}
+<div class="col-6 col-md-4 my-2">
+    <div class="employee card border-rounded hover-grow {{ active_classes if is_active else '' }}" data-toggle="{{ active_classes }}">
+        <div class="card-body">
+            <h5 class="card-title">{{ employee.name }}</h5>
+            <p class="card-text" data-rate="{{ employee.hourly_rate }}">
+                <span class="text-muted">Hourly rate:</span>
+                <span class="rate" data-value="{{ employee.hourly_rate }}">${{ employee.hourly_rate|currency_float }}</span>
+            </p>
+        </div>
+    </div>
+</div>
+{% endmacro %}
+
+{% block content %}
+<div class="container col-lg-8 px-2">
+    <h1 class="text-center">Estimate</h1>
+    <form action="{{ form.action }}" method="post">
+        {% call main_div() %}
+            <h2>Job Details</h2>
+        {% endcall %}
+        {% call h3_container() %}
+            {{ h3_field(form.description) }}
+            {{ h3_field(form.hours) }}
+            {{ h3_field(form.hourly_rate) }}
+            <div id="employees" class="row my-2 py-2">
+            {% for employee in employees %}
+                {{ employee_card(employee, loop.first) }}
+            {% endfor %}
+            </div>
+        {% endcall %}
+
+        {{ total_row('Expenses', value='0.00', data_calc='#supplies + #misc') }}
+        {% call h3_container() %}
+            {{ h3_field(form.labor, input_attrs=dict(class='expense', data_calc='#hourly_rate * #hours')) }}
+            {{ h3_field(form.supplies, input_attrs=dict(class='expense')) }}
+            {{ h3_field(form.misc, input_attrs=dict(class='expense')) }}
+        {% endcall %}
+
+        {{ h2_field(form.profit, input_attrs=dict(class='fw-bold border-light', style='font-size:calc(1.275rem + .3vw)', data_calc='#subtotal * #profit_margin / 100')) }}
+        {% call h3_container() %}
+            {{ h3_field(form.profit_margin, input_suffix='%') }}
+        {% endcall %}
+
+        {{ total_row('Subtotal', value='0.00', data_calc='#expenses + #profit', subscribers='grand-total') }}
+
+        {{ total_row('Tax', value='0.00', data_calc='#subtotal * #tax_rate / 100') }}
+        {% call h3_container() %}
+            {{ h3_field(form.tax_rate, input_suffix='%') }}
+        {% endcall %}
+
+        {{ total_row(title='Grand Total', value='0.00', data_calc='#subtotal + #tax', underlined=False) }}
+
+        <div class="row mt-4 mb-2">
+            <button type="submit" class="btn btn-primary btn-lg col-6 offset-6 col-md-4 offset-md-8">{{ form.button_text }}</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="text/javascript">
+    const toggleElements = document.querySelectorAll("[data-toggle]")
+    for (const toggle of toggleElements) {
+        toggleClasses = toggle.getAttribute('data-toggle').split(" ");
+        toggle.addEventListener('click', (event) => toggleClasses.forEach(cls => toggle.classList.toggle(cls)));
+    }
+</script>
+<script type="text/javascript" src="{{ url_for('static', filename='scripts/estimate.js') }}"></script>
+{% endblock %}

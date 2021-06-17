@@ -1,0 +1,39 @@
+{% extends 'layouts/base.html' %}
+
+{% from 'components/_forms.html' import inline_form %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">{% block title %}{{ form.name }}{% endblock %}</div>
+                <div class="card-body">
+                    {% set server_errors = get_flashed_messages() %}
+                    {% if form.errors or server_errors %}
+                    <div class="alert alert-danger">
+                        <ul class="list-unstyled mb-0">
+                            {% if form.errors %}
+                                {% for _, field_errors in form.errors.items() %}
+                                    {% for error in field_errors %}
+                                    <li>{{ error }}</li>
+                                    {% endfor %}
+                                {% endfor %}
+                            {% endif %}
+
+                            {% if server_errors %}
+                                {% for message in server_errors %}
+                                <li>{{ message }}</li>
+                                {% endfor %}
+                            {% endif %}
+                        </ul>
+                    </div>
+                    {% endif %}
+
+                    {{ inline_form(form) }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
